@@ -1,0 +1,14 @@
+D:\GitMETERIEN\MDT\UITemplates\MonitoringMCAST\MCAST Monitoring\bin\Debug\MCAST Monitoring.exe.config
+D:\GitMETERIEN\MDT\UITemplates\MonitoringMCAST\MCAST Monitoring\bin\Debug\MCAST Monitoring.exe
+D:\GitMETERIEN\MDT\UITemplates\MonitoringMCAST\MCAST Monitoring\bin\Debug\MCAST Monitoring.pdb
+D:\GitMETERIEN\MDT\UITemplates\MonitoringMCAST\MCAST Monitoring\obj\Debug\MCAST Monitoring.csprojResolveAssemblyReference.cache
+D:\GitMETERIEN\MDT\UITemplates\MonitoringMCAST\MCAST Monitoring\obj\Debug\MainWindow.g.cs
+D:\GitMETERIEN\MDT\UITemplates\MonitoringMCAST\MCAST Monitoring\obj\Debug\App.g.cs
+D:\GitMETERIEN\MDT\UITemplates\MonitoringMCAST\MCAST Monitoring\obj\Debug\MCAST Monitoring_MarkupCompile.cache
+D:\GitMETERIEN\MDT\UITemplates\MonitoringMCAST\MCAST Monitoring\obj\Debug\MCAST Monitoring_MarkupCompile.lref
+D:\GitMETERIEN\MDT\UITemplates\MonitoringMCAST\MCAST Monitoring\obj\Debug\MainWindow.baml
+D:\GitMETERIEN\MDT\UITemplates\MonitoringMCAST\MCAST Monitoring\obj\Debug\MCAST Monitoring.g.resources
+D:\GitMETERIEN\MDT\UITemplates\MonitoringMCAST\MCAST Monitoring\obj\Debug\MCAST_Monitoring.Properties.Resources.resources
+D:\GitMETERIEN\MDT\UITemplates\MonitoringMCAST\MCAST Monitoring\obj\Debug\MCAST Monitoring.csproj.GenerateResource.Cache
+D:\GitMETERIEN\MDT\UITemplates\MonitoringMCAST\MCAST Monitoring\obj\Debug\MCAST Monitoring.exe
+D:\GitMETERIEN\MDT\UITemplates\MonitoringMCAST\MCAST Monitoring\obj\Debug\MCAST Monitoring.pdb

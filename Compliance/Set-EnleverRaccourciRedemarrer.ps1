@@ -1,0 +1,1 @@
+﻿Remove-Item "$env:PUBLIC\Desktop\Redémarrer.lnk" -Force

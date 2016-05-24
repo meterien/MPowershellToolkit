@@ -1,0 +1,1 @@
+﻿Start-Process -FilePath "$env:windir\system32\WinSAT.exe" -ArgumentList "formal" -WindowStyle Hidden
