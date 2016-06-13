@@ -1,8 +1,8 @@
 ﻿# -----
 # Author :            Josua Baril-Aumond
 # Creation date :     2015-06-26
-# Modification  :     2016-03-10
-# Version :           0.1.0
+# Modification  :     2016-05-06
+# Version :           0.1.1
 # Description :       FR => Cet outil va permettre de concilier l'inventaire Active Directory et celui de ConfigMgr 2012. Les ordinateurs sont enlevés du groupe
 #                           à la prochaine execution du script s'ils se trouvent maintenant sur le contrôleur de domaine. Les ordinateurs qui se conforment avec 
 #                           les règles suivante seront déplacé dans un regroupement à cet effet.
@@ -15,7 +15,11 @@
 #                           Les ordinateurs qui se conforment avec les règles suivante seront déplacé dans un regroupement à cet effet.
 #
 #                           1. The PC is not in Active Directory but exist in ConfigMgr database
-#------
+# -----
+#
+# 0.1.1
+#       + Check ConfigMgr module in SMS_ADMIN_UI_PATH environment variable
+# -----
 
 [CmdletBinding()]
 Param (
@@ -43,6 +47,9 @@ Param (
     [parameter(Mandatory=$true)]
     [String]$pInstallationFolder
 )
+
+$ConfigMgrPath = Split-Path -Path "${Env:SMS_ADMIN_UI_PATH}"
+$ConfigMgrConsoleFile = Join-Path -Path $ConfigMgrPath -ChildPath "ConfigurationManager.psd1"
 
 # Logging in the CMTRACE.EXE format
 Function Log-ScriptEvent { 
@@ -90,7 +97,8 @@ Function Check-Requirement {
     Log-ScriptEvent -Value "Requirement :" -Severity 1 -Component "Requirements" -NewLog $logName
     $passed = $true
     # ConfigMgr installation folder accessible
-    if(-not (Test-Path -Path "$pInstallationFolder\AdminConsole\bin\ConfigurationManager.psd1")) 
+    #if(-not (Test-Path -Path "$pInstallationFolder\AdminConsole\bin\ConfigurationManager.psd1")) 
+    if(-not (Test-Path -Path $ConfigMgrConsoleFile)) 
     { 
         $passed = $false
         Log-ScriptEvent -Value "+ Console installation folder : Not reachable" -Severity 1 -Component "Requirements" -NewLog $logName
@@ -160,8 +168,7 @@ if(Check-Requirement){
     Log-ScriptEvent -Value "Cleanup :" -Severity 1 -Component "Clean logs" -NewLog $logName
     $logFiles = Get-ChildItem -Path $logLocation -Filter "CM-ADMaintenance*.log"
     Log-ScriptEvent -Value "+ Log files count : $($logFiles.Count)/$maxLogFiles" -Severity 1 -Component "Clean logs" -NewLog $logName
-    if(($logFiles.Count -gt $maxLogFiles) -and ($maxLogFiles -ne ""))
-    {
+    if(($logFiles.Count -gt $maxLogFiles) -and ($maxLogFiles -ne "")) {
         [int]$deleteCount = [int]$logFiles.Count - [int]$maxLogFiles
         Log-ScriptEvent -Value "+ File to delete : $deleteCount" -Severity 1 -Component "Clean logs" -NewLog $logName
         for($i = $deleteCount ; $i -gt 0 ; $i --)
@@ -171,20 +178,21 @@ if(Check-Requirement){
             Remove-Item -Path $tempFile.FullName
         }
     }
-    else
-    {
+    else {
         Log-ScriptEvent -Value "+ No file to delete" -Severity 1 -Component "Clean logs" -NewLog $logName
     }
     # Load ConfigMgr powershell
     Log-ScriptEvent -Value "--------------------------------------" -Severity 1 -Component "Informations" -NewLog $logName
     Log-ScriptEvent -Value "Powershell module :" -Severity 1 -Component "Load modules" -NewLog $logName
-    if(!(Get-Module -Name "ConfigurationManager"))
-    {
+    if(!(Get-Module -Name "ConfigurationManager")) {
         # Load appropriate module
-        Log-ScriptEvent -Value "+ Loading ConfigurationManager module" -Severity 1 -Component "Load Modules" -NewLog $logName
-        $mess = "Ok"
-        $mess = Import-Module -Name "$pInstallationFolder\AdminConsole\bin\ConfigurationManager\ConfigurationManager.psd1" -Verbose
-        Log-ScriptEvent -Value "+ Message : $mess" -Severity 1 -Component "Load Modules" -NewLog $logName
+        Log-ScriptEvent -Value "+ Loading ConfigurationManager module : $ConfigMgrConsoleFile" -Severity 1 -Component "Load Modules" -NewLog $logName
+        $mess = "Not OK"
+        #$mess = Import-Module -Name "$pInstallationFolder\AdminConsole\bin\ConfigurationManager\ConfigurationManager.psd1" -Verbose
+        Import-Module -Name $ConfigMgrConsoleFile
+        if(!(Get-Module -Name "ConfigurationManager")) {
+            Log-ScriptEvent -Value "ConfigMgr module not loaded..." -Severity 1 -Component "Errors" -NewLog $logName
+        }
     }
     else
     {
@@ -192,18 +200,19 @@ if(Check-Requirement){
     }
     # Connection to the primary site
     Log-ScriptEvent -Value "--------------------------------------" -Severity 1 -Component "Informations" -NewLog $logName
-    $mess = Set-Location -Path $sitecode -PassThru
+    #Set-Location -Path $sitecode
+    CD $sitecode
     Set-CMQueryResultMaximum -Maximum $maxdevices
     $computerAddedToMaintenance = @()
     $computerRemovedFromMaintenance = @()
-    Log-ScriptEvent -Value "Connection to ConfigMgr site ($sitecodePlain) : $mess" -Severity 1 -Component "ConfigMgr connection" -NewLog $logName
-    # Récupérer l'information sur les ordinateurs si le regroupement à vérifier existe
+    Log-ScriptEvent -Value "Connection to ConfigMgr site ($sitecodePlain)" -Severity 1 -Component "ConfigMgr connection" -NewLog $logName
+    # Get computers informations if the target collection exist
     Log-ScriptEvent -Value "+ Gather computers informations from collection id : $idCollectionDevicesToCheck" -Severity 1 -Component "ConfigMgr connection" -NewLog $logName
     if(Get-CMCollection -Id $idCollectionDevicesToCheck)
     {
         #$Computers = Get-CMDevice -CollectionId $idCollectionDevicesToCheck | Select-Object -Property Name, ResourceID
         [System.Collections.ArrayList]$Computers = Get-WmiObject -ComputerName $SiteServer -Namespace "root\sms\site_$SiteCodePlain" -Query "SELECT Name, ResourceID FROM SMS_FullCollectionMembership WHERE CollectionID='$idCollectionDevicesToCheck' order by name" | Select-Object -Property Name, ResourceID
-        if($($Computers.Count) -ne 0)
+        if($Computers)
         {
             Log-ScriptEvent -Value "+ $($Computers.Count) devices found" -Severity 1 -Component "ConfigMgr connection" -NewLog $logName
         }

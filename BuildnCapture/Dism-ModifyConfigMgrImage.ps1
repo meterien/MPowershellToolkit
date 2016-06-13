@@ -3,10 +3,9 @@
     [String]$wimFile,
     [parameter(Mandatory=$True)]
     $mountPoint,
-    [parameter(Mandatory=$True)]
     $dismExe = "${env:ProgramFiles(x86)}\Windows Kits\8.1\Assessment and Deployment Kit\Deployment Tools\amd64\DISM\dism.exe",
     $ccmappsFolder = "C:\Windows\ccmapps",
-    $appsToCopy = ""
+    $appsToCopy = @()
 )
 
 function prereq
@@ -19,8 +18,7 @@ function prereq
     else { return $false }
 }
 
-if(prereq -eq $true)
-{
+if(prereq -eq $true) {
     # Mount wim file with DISM
     Write-Host "Mounting wim file in : $mountPoint"
     $dismProcMount = Start-Process -FilePath $dismExe -ArgumentList "/Mount-Image /ImageFile:$wimFile /index:1 /MountDir:$mountPoint" -PassThru
@@ -35,9 +33,9 @@ if(prereq -eq $true)
     {
         foreach($app in $appsToCopy)
         {
-            Write-Host "Copy of folder $ccmapps\$app in $mountPoint\Windows\ccmapps"
+            Write-Host "Copy of folder $ccmappsFolder\$app in $mountPoint\Windows\ccmapps"
             If(Test-Path "$mountPoint\Windows\ccmapps\$app") { Remove-Item "$mountPoint\Windows\ccmapps\$app" -Recurse -Force }
-            Copy-Item -Path "$ccmapps\$app" -Destination "$mountPoint\Windows\ccmapps" -Recurse
+            Copy-Item -Path "$ccmappsFolder\$app" -Destination "$mountPoint\Windows\ccmapps" -Recurse
         }
     }
     # Unmount the wim file
@@ -52,6 +50,9 @@ if(prereq -eq $true)
         }
         Write-Host "Unmount ended with error code $($dismProcCommit.ExitCode)"
     }
+}
+else {
+    Write-Host "Prereq not meet"
 }
 
 #$dismProcExtract = Start-Process -FilePath $dismExe -ArgumentList "/Export-Image /SourceImageFile:$wimFile /SourceIndex:1 /Compress:max /DestinationImageFile:Test.wim /DestinationName:Windows22" -PassThru

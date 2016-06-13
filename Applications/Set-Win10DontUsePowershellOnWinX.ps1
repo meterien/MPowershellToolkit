@@ -12,11 +12,11 @@ $location = Get-Location
 Push-Location 'HKLM:\DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
 if($Enable)
 {
-    New-ItemProperty -Path . -Name "DontUsePowerShellOnWinX" -PropertyType DWORD -Value 1 -Force
+    New-ItemProperty -Path . -Name "DontUsePowerShellOnWinX" -PropertyType DWORD -Value 0 -Force
 }
 else
 {
-    New-ItemProperty -Path . -Name "DontUsePowerShellOnWinX" -PropertyType DWORD -Value 0 -Force
+    New-ItemProperty -Path . -Name "DontUsePowerShellOnWinX" -PropertyType DWORD -Value 1 -Force
 }
 Set-Location $location
 $unloaded = $false
