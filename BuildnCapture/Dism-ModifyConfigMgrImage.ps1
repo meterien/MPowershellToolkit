@@ -3,7 +3,9 @@
     [String]$wimFile,
     [parameter(Mandatory=$True)]
     $mountPoint,
-    $dismExe = "${env:ProgramFiles(x86)}\Windows Kits\8.1\Assessment and Deployment Kit\Deployment Tools\amd64\DISM\dism.exe",
+    [parameter(Mandatory=$True)]
+    [Validateset('ADK8.1', 'ADK10')]
+    $dismVersion,
     $ccmappsFolder = "C:\Windows\ccmapps",
     $appsToCopy = @()
 )
@@ -19,6 +21,11 @@ function prereq
 }
 
 if(prereq -eq $true) {
+    switch($dismVersion) {
+        "ADK8.1" { $dismExe = "${env:ProgramFiles(x86)}\Windows Kits\8.1\Assessment and Deployment Kit\Deployment Tools\amd64\DISM\dism.exe"}
+        "ADK10" { $dismExe = "${env:ProgramFiles(x86)}\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\amd64\DISM\dism.exe" }
+        default { $dismExe = "${env:ProgramFiles(x86)}\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\amd64\DISM\dism.exe" }
+    }
     # Mount wim file with DISM
     Write-Host "Mounting wim file in : $mountPoint"
     $dismProcMount = Start-Process -FilePath $dismExe -ArgumentList "/Mount-Image /ImageFile:$wimFile /index:1 /MountDir:$mountPoint" -PassThru
