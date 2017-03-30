@@ -96,3 +96,11 @@ if(Test-Path $startLayout)
     Copy-Item -Path "$currentLocation\Internet Explorer.lnk" -Destination "$env:ALLUSERSPROFILE\Microsoft\Windows\Start Menu\Programs" -Force
     Import-StartLayout -LayoutPath $startLayout -MountPath "$env:SystemDrive\"
 }
+
+# Set cortana search bar mode
+<#
+    0 = Hidden
+    1 = Show Cortana icon
+    2 = Show search box
+#>
+New-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Search" -Name "SearchboxTaskbarMode" -PropertyType DWORD -Value 2 -Force
