@@ -7,6 +7,7 @@ param(
 # Get the current location
 $currentLocation = Split-Path -Parent $MyInvocation.MyCommand.Path
 
+# Replace command prompt with powershell (No longer used)
 #New-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "DontUsePowerShellOnWinX" -PropertyType DWORD -Value 0 -Force
 
 # Show system icons on the desktop (0=Show and 1=Hide)
@@ -30,11 +31,69 @@ New-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer
 # Disable Location and Sensors (0=Enable and 1=Disable)
 #New-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\Windows\LocationAndSensors" -Name "DisableWindowsLocationProvider" -PropertyType DWORD -Value 1 -Force
 
+
+#New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" -Name "LegacyDefaultPrinterMode" -PropertyType DWORD -Value 1 -Force
+
+# Disable network delivery optimization service
+<#
+  0 = Off
+  1 = On, PCs on my local network
+  3 = On, PCs on my local network, and PCs on the Internet
+#>
+New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config" -Name "DODownloadMode" -PropertyType DWORD -Value 0 -Force
+
+# Disable Windows feedback
+if(-not (Test-Path "HKLM:\Software\Microsoft\Siuf\Rules")) { New-Item -Path "HKLM:\Software\Microsoft\Siuf\Rules" }
+New-ItemProperty -Path "HKLM:\Software\Microsoft\Siuf\Rules" -Name "PeriodInNanoSeconds" -PropertyType DWORD -Value 0 -Force
+New-ItemProperty -Path "HKLM:\Software\Microsoft\Siuf\Rules" -Name "NumberOfSIUFInPeriod" -PropertyType DWORD -Value 0 -Force
+
+# Disable Wifi-Sense
+New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config" -Name "AutoConnectAllowedOEM" -PropertyType DWORD -Value 0 -Force
+
+# Disable Microsoft consumer experiences
+if(-not (Test-Path -Path"HKLM:\Software\Policies\Microsoft\Windows\CloudContent")) { New-Item -Path "HKLM:\Software\Policies\Microsoft\Windows\CloudContent" -Force }
+New-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsConsumerFeatures" -PropertyType DWORD -Value 1 -Force
+
+# Set the default start layout
+if(Test-Path $startLayout)
+{
+    Copy-Item -Path "$currentLocation\Internet Explorer.lnk" -Destination "$env:ALLUSERSPROFILE\Microsoft\Windows\Start Menu\Programs" -Force
+    Import-StartLayout -LayoutPath $startLayout -MountPath "$env:SystemDrive\"
+}
+
+# Set cortana search bar mode
+<#
+    0 = Hidden
+    1 = Show Cortana icon
+    2 = Show search box
+#>
+New-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Search" -Name "SearchboxTaskbarMode" -PropertyType DWORD -Value 2 -Force
+
+# Set the Telemetry level to security only
+<#
+  0. This setting maps to the Security level.
+  1. This setting maps to the Basic level.
+  2. This setting maps to the Enhanced level
+  3. This setting maps to the Full level.
+#>
+New-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\DataCollection" -Name "AllowTelemetry" -PropertyType DWORD -Value 0 -Force
+
+# Remove the lock screen (swipe panel before login)
+if(-not (Test-Path -Path "HKLM:\Software\Policies\Microsoft\Windows\Personalization")) { New-Item -Path "HKLM:\Software\Policies\Microsoft\Windows\Personalization" -Force }
+New-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\Windows\Personalization" -Name "NoLockScreen" -PropertyType DWORD -Value 1 -Force
+
+# Configure the Windows Store
+if(-not (Test-Path -Path "HKLM:\Software\Policies\Microsoft\WindowsStore")) { New-Item -Path "HKLM:\Software\Policies\Microsoft\WindowsStore" -Force }
+#New-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\WindowsStore" -Name "RequirePrivateStoreOnly" -PropertyType DWORD -Value 1 -Force
+New-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\WindowsStore" -Name "RemoveWindowsStore" -PropertyType DWORD -Value 1 -Force
+
+
 # Set the DPI to 100 pourcent
 $location = Get-Location
 & REG LOAD HKLM\DEFAULT C:\Users\Default\NTUSER.DAT
 Push-Location 'HKLM:\DEFAULT\Control Panel\Desktop'
 New-ItemProperty -Path . -Name "LogPixels" -PropertyType DWORD -Value 96 -Force
+New-ItemProperty -Path . -Name "Win8DpiScaling" -PropertyType DWORD -Value 0 -Force
 Set-Location $location
 $unloaded = $false
 $attempts = 0
@@ -59,48 +118,3 @@ while (!$unloaded -and ($attempts -le 5)) {
   $unloaded = $?
   $attempts += 1
 }
-#New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" -Name "LegacyDefaultPrinterMode" -PropertyType DWORD -Value 1 -Force
-
-# Disable network delivery optimization service
-<#
-  0 = Off
-  1 = On, PCs on my local network
-  3 = On, PCs on my local network, and PCs on the Internet
-#>
-New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config" -Name "DODownloadMode" -PropertyType DWORD -Value 0 -Force
-
-# Disable Windows feedback
-if(-not (Test-Path "HKLM:\Software\Microsoft\Siuf\Rules")) { New-Item -Path "HKLM:\Software\Microsoft\Siuf\Rules" }
-New-ItemProperty -Path "HKLM:\Software\Microsoft\Siuf\Rules" -Name "PeriodInNanoSeconds" -PropertyType DWORD -Value 0 -Force
-New-ItemProperty -Path "HKLM:\Software\Microsoft\Siuf\Rules" -Name "NumberOfSIUFInPeriod" -PropertyType DWORD -Value 0 -Force
-
-# Disable Wifi-Sense
-New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config" -Name "AutoConnectAllowedOEM" -PropertyType DWORD -Value 0 -Force
-
-# Disable Microsoft consumer experiences
-if(-not (Test-Path -Path"HKLM:\Software\Policies\Microsoft\Windows\CloudContent")) { New-Item -Path "HKLM:\Software\Policies\Microsoft\Windows\CloudContent" -Force }
-New-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsConsumerFeatures" -PropertyType DWORD -Value 1 -Force
-
-# Set the Telemetry level to security only
-<#
-  0. This setting maps to the Security level.
-  1. This setting maps to the Basic level.
-  2. This setting maps to the Enhanced level
-  3. This setting maps to the Full level.
-#>
-New-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\DataCollection" -Name "AllowTelemetry" -PropertyType DWORD -Value 0 -Force
-
-# Set the default start layout
-if(Test-Path $startLayout)
-{
-    Copy-Item -Path "$currentLocation\Internet Explorer.lnk" -Destination "$env:ALLUSERSPROFILE\Microsoft\Windows\Start Menu\Programs" -Force
-    Import-StartLayout -LayoutPath $startLayout -MountPath "$env:SystemDrive\"
-}
-
-# Set cortana search bar mode
-<#
-    0 = Hidden
-    1 = Show Cortana icon
-    2 = Show search box
-#>
-New-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Search" -Name "SearchboxTaskbarMode" -PropertyType DWORD -Value 2 -Force

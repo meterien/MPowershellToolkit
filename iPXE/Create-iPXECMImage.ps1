@@ -17,6 +17,10 @@ Import-Module BitsTransfer
 
 # Variables
 [string]$scriptDirectory = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
+# ADK 8.1 
+$ADK81 = "${env:ProgramFiles(x86)}\Windows Kits\8.1\Assessment and Deployment Kit\Deployment Tools\amd64\DISM"
+# ADK 10
+$ADK10 = "${env:ProgramFiles(x86)}\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\amd64\DISM"
 
 # Connect to Config site
 $location = Get-Location
@@ -26,7 +30,11 @@ cd "$($p_siteCode):"
 $passwordS = ConvertTo-SecureString $p_password -AsPlainText -Force
 if(Test-Path $p_folder)
 {
-    New-CMTaskSequenceMedia -BootableMedia -MediaInputType CdDvd -ProtectPassword $true -Password $passwordS -BootImageId $p_imageId -DistributionPoint $p_server -ManagementPoint $p_server -MediaMode Dynamic -MediaPath "$p_folder\$p_imageId.iso" -MediaSize SizeUnlimited -EnableUnknownSupport $true -CreateMediaSelfCertificate $true -AllowUnattendedDeployment $false
+    #New-CMTaskSequenceMedia -BootableMedia -MediaInputType CdDvd -ProtectPassword $true -Password $passwordS -BootImageId $p_imageId -DistributionPoint $p_server -ManagementPoint $p_server -MediaMode Dynamic -MediaPath "$p_folder\$p_imageId.iso" -MediaSize SizeUnlimited -EnableUnknownSupport $true -CreateMediaSelfCertificate $true -AllowUnattendedDeployment $false
+    $BootImage = Get-CMBootImage -Id $p_imageId
+    $ManagementPoint = Get-CMManagementPoint -SiteCode 799
+    $DistributionPoint = Get-CMDistributionPoint -SiteCode 799
+    New-CMBootableMedia -AllowUnknownMachine -BootImage $BootImage -DistributionPoint $DistributionPoint -MediaPassword $passwordS -MediaType CdDvd -ManagementPoint $ManagementPoint -MediaMode Dynamic -Path "$p_folder\$p_imageId.iso" -AllowUnattended
 }
 else
 {
@@ -40,7 +48,7 @@ cd $location
 
 # Extract the content of the ISO
 cd $p_folder
-& "$scriptDirectory\Extract-ISOContent.ps1" -isoPath "$p_folder\$p_imageId.iso" -destination "$p_folder\$p_imageId"
+& ".\Extract-ISOContent.ps1" -isoPath "$p_folder\$p_imageId.iso" -destination "$p_folder\$p_imageId"
 
 # Download the last version of Wimboot and extract it
 $url = "http://git.ipxe.org/releases/wimboot/wimboot-latest.zip"
@@ -50,7 +58,7 @@ $wimbootFolder = Get-ChildItem -Path "$p_folder\wimbootSources"
 
 # Modify the boot image
 $mountFolder = "$p_folder\Work\Mount"
-$DismExe = "${env:ProgramFiles(x86)}\Windows Kits\8.1\Assessment and Deployment Kit\Deployment Tools\amd64\DISM\dism.exe"
+$DismExe = "$ADK10\dism.exe"
 $WimFile = "$p_folder\$p_imageId\sources\boot.wim"
 Set-ItemProperty $WimFile -name IsReadOnly -value $false
 
