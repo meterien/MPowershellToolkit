@@ -57,8 +57,8 @@ New-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\Windows\CloudContent" 
 # Set the default start layout
 if(Test-Path $startLayout)
 {
-    Copy-Item -Path "$currentLocation\Internet Explorer.lnk" -Destination "$env:ALLUSERSPROFILE\Microsoft\Windows\Start Menu\Programs" -Force
-    Import-StartLayout -LayoutPath $startLayout -MountPath "$env:SystemDrive\"
+    #Copy-Item -Path "$currentLocation\Internet Explorer.lnk" -Destination "$env:ALLUSERSPROFILE\Microsoft\Windows\Start Menu\Programs" -Force
+    Import-StartLayout -LayoutPath $startLayout -MountPath $env:SystemDrive
 }
 
 # Set cortana search bar mode
@@ -67,7 +67,28 @@ if(Test-Path $startLayout)
     1 = Show Cortana icon
     2 = Show search box
 #>
-New-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Search" -Name "SearchboxTaskbarMode" -PropertyType DWORD -Value 2 -Force
+#New-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Search" -Name "SearchboxTaskbarMode" -PropertyType DWORD -Value 2 -Force
+$location = Get-Location
+& REG LOAD HKLM\DEFAULT C:\Users\Default\NTUSER.DAT
+if(-not (Test-Path -Path "HKLM:\DEFAULT\Software\Microsoft\Windows\CurrentVersion\Search")) { New-Item -Path "HKLM:\DEFAULT\Software\Software\Microsoft\Windows\CurrentVersion\Search" -Force }
+Push-Location "HKLM:\DEFAULT\Software\Microsoft\Windows\CurrentVersion\Search"
+New-ItemProperty -Path . -Name "SearchboxTaskbarMode" -PropertyType DWORD -Value 2 -Force
+#if(-not (Test-Path -Path "HKLM:\DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People")) { New-Item -Path "HKLM:\DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People" -Force }
+#Push-Location 'HKLM:\DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People'
+#New-ItemProperty -Path . -Name "PeopleBand" -PropertyType DWORD -Value 0 -Force
+Set-Location $location
+$unloaded = $false
+$attempts = 0
+while (!$unloaded -and ($attempts -le 5)) {
+  [gc]::Collect() # necessary call to be able to unload registry hive
+  & REG UNLOAD HKLM\DEFAULT
+  $unloaded = $?
+  $attempts += 1
+}
+
+# Disable cortana
+if(-not (Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search")) { New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" }
+New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "AllowCortana" -PropertyType DWORD -Value 0 -Force
 
 # Set the Telemetry level to security only
 <#
@@ -87,6 +108,8 @@ if(-not (Test-Path -Path "HKLM:\Software\Policies\Microsoft\WindowsStore")) { Ne
 #New-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\WindowsStore" -Name "RequirePrivateStoreOnly" -PropertyType DWORD -Value 1 -Force
 New-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\WindowsStore" -Name "RemoveWindowsStore" -PropertyType DWORD -Value 1 -Force
 
+# Allow third party application installation
+New-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "AicEnabled" -PropertyType STRING -Value "Anywhere" -Force
 
 # Set the DPI to 100 pourcent
 $location = Get-Location
@@ -109,6 +132,25 @@ $location = Get-Location
 & REG LOAD HKLM\DEFAULT C:\Users\Default\NTUSER.DAT
 Push-Location 'HKLM:\DEFAULT\Software\Microsoft\Windows NT\CurrentVersion\Windows'
 New-ItemProperty -Path . -Name "LegacyDefaultPrinterMode" -PropertyType DWORD -Value 1 -Force
+Set-Location $location
+$unloaded = $false
+$attempts = 0
+while (!$unloaded -and ($attempts -le 5)) {
+  [gc]::Collect() # necessary call to be able to unload registry hive
+  & REG UNLOAD HKLM\DEFAULT
+  $unloaded = $?
+  $attempts += 1
+}
+
+# Disable people icon
+$location = Get-Location
+& REG LOAD HKLM\DEFAULT C:\Users\Default\NTUSER.DAT
+if(-not (Test-Path -Path "HKLM:\DEFAULT\Software\Policies\Microsoft\Windows\Explorer")) { New-Item -Path "HKLM:\DEFAULT\Software\Policies\Microsoft\Windows\Explorer" -Force }
+Push-Location "HKLM:\DEFAULT\Software\Policies\Microsoft\Windows\Explorer"
+New-ItemProperty -Path . -Name "HidePeopleBar" -PropertyType DWORD -Value 1 -Force
+#if(-not (Test-Path -Path "HKLM:\DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People")) { New-Item -Path "HKLM:\DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People" -Force }
+#Push-Location 'HKLM:\DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\People'
+#New-ItemProperty -Path . -Name "PeopleBand" -PropertyType DWORD -Value 0 -Force
 Set-Location $location
 $unloaded = $false
 $attempts = 0

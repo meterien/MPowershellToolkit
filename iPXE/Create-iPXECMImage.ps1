@@ -4,11 +4,11 @@
 # Must have powershell v5
 
 Param(
-    [String]$p_server = "myserver",
-    [String]$p_siteCode = "001",
-    [String]$p_imageId = "SMS000088",
-    [String]$p_password,
-    [String]$p_folder
+    [String]$ServerName,
+    [String]$SiteCode,
+    [String]$BootImageId,
+    [String]$MediaPassword,
+    [String]$WorkFolder
 )
 
 # Import required module (must have admin console)
@@ -24,21 +24,21 @@ $ADK10 = "${env:ProgramFiles(x86)}\Windows Kits\10\Assessment and Deployment Kit
 
 # Connect to Config site
 $location = Get-Location
-cd "$($p_siteCode):"
+cd "$($SiteCode):"
 
 # Create boot media
-$passwordS = ConvertTo-SecureString $p_password -AsPlainText -Force
-if(Test-Path $p_folder)
+$passwordS = ConvertTo-SecureString $MediaPassword -AsPlainText -Force
+if(Test-Path $WorkFolder)
 {
-    #New-CMTaskSequenceMedia -BootableMedia -MediaInputType CdDvd -ProtectPassword $true -Password $passwordS -BootImageId $p_imageId -DistributionPoint $p_server -ManagementPoint $p_server -MediaMode Dynamic -MediaPath "$p_folder\$p_imageId.iso" -MediaSize SizeUnlimited -EnableUnknownSupport $true -CreateMediaSelfCertificate $true -AllowUnattendedDeployment $false
-    $BootImage = Get-CMBootImage -Id $p_imageId
+    #New-CMTaskSequenceMedia -BootableMedia -MediaInputType CdDvd -ProtectPassword $true -Password $passwordS -BootImageId $BootImageId -DistributionPoint $ServerName -ManagementPoint $ServerName -MediaMode Dynamic -MediaPath "$WorkFolder\$BootImageId.iso" -MediaSize SizeUnlimited -EnableUnknownSupport $true -CreateMediaSelfCertificate $true -AllowUnattendedDeployment $false
+    $BootImage = Get-CMBootImage -Id $BootImageId
     $ManagementPoint = Get-CMManagementPoint -SiteCode 799
     $DistributionPoint = Get-CMDistributionPoint -SiteCode 799
-    New-CMBootableMedia -AllowUnknownMachine -BootImage $BootImage -DistributionPoint $DistributionPoint -MediaPassword $passwordS -MediaType CdDvd -ManagementPoint $ManagementPoint -MediaMode Dynamic -Path "$p_folder\$p_imageId.iso" -AllowUnattended
+    New-CMBootableMedia -AllowUnknownMachine -BootImage $BootImage -DistributionPoint $DistributionPoint -MediaPassword $passwordS -MediaType CdDvd -ManagementPoint $ManagementPoint -MediaMode Dynamic -Path "$WorkFolder\$BootImageId.iso" -AllowUnattended
 }
 else
 {
-    Write-Host "Veuillez indiquer un dossier de destination valide. ($p_folder)"
+    Write-Host "Veuillez indiquer un dossier de destination valide. ($WorkFolder)"
     cd $location
     Exit
 }
@@ -47,19 +47,19 @@ else
 cd $location
 
 # Extract the content of the ISO
-cd $p_folder
-& ".\Extract-ISOContent.ps1" -isoPath "$p_folder\$p_imageId.iso" -destination "$p_folder\$p_imageId"
+#cd $WorkFolder
+& ".\Extract-ISOContent.ps1" -isoPath "$WorkFolder\$BootImageId.iso" -destination "$WorkFolder\$BootImageId"
 
 # Download the last version of Wimboot and extract it
 $url = "http://git.ipxe.org/releases/wimboot/wimboot-latest.zip"
-Start-BitsTransfer -Source $url -Destination "$p_folder\wimboot.zip"
-Expand-Archive -Path "$p_folder\wimboot.zip" -DestinationPath "$p_folder\wimbootSources\" -Force
-$wimbootFolder = Get-ChildItem -Path "$p_folder\wimbootSources"
+Start-BitsTransfer -Source $url -Destination "$WorkFolder\wimboot.zip"
+Expand-Archive -Path "$WorkFolder\wimboot.zip" -DestinationPath "$WorkFolder\wimbootSources\" -Force
+$wimbootFolder = Get-ChildItem -Path "$WorkFolder\wimbootSources"
 
 # Modify the boot image
-$mountFolder = "$p_folder\Work\Mount"
+$mountFolder = "$WorkFolder\Work\Mount"
 $DismExe = "$ADK10\dism.exe"
-$WimFile = "$p_folder\$p_imageId\sources\boot.wim"
+$WimFile = "$WorkFolder\$BootImageId\sources\boot.wim"
 Set-ItemProperty $WimFile -name IsReadOnly -value $false
 
 Write-Host "Début du montage de l'image dans le répertoire : $mountFolder"
@@ -75,10 +75,10 @@ Write-Host "Montage terminé avec le code : $($dismProcMount.ExitCode)"
 if($dismProcMount.ExitCode -eq 0)
 {
     Write-Host "Copie des fichiers sms dans l'image..."
-    Copy-Item -Path "$p_folder\$p_imageId\sms" -Destination "$mountFolder" -Recurse -Force
-    Copy-Item -Path "$p_folder\winpeshl.ini" -Destination "$mountFolder\Windows\System32" -Force
-    Copy-Item -Path "$p_folder\bootstrap.vbs" -Destination "$mountFolder\sms\bin\x64" -Force
-    Copy-Item -Path "$p_folder\cmtrace.exe" -Destination "$mountFolder\Windows\System32" -Force
+    Copy-Item -Path "$WorkFolder\$BootImageId\sms" -Destination "$mountFolder" -Recurse -Force
+    Copy-Item -Path "$WorkFolder\winpeshl.ini" -Destination "$mountFolder\Windows\System32" -Force
+    Copy-Item -Path "$WorkFolder\bootstrap.vbs" -Destination "$mountFolder\sms\bin\x64" -Force
+    Copy-Item -Path "$WorkFolder\cmtrace.exe" -Destination "$mountFolder\Windows\System32" -Force
     Write-Host "Début de l'enregistrement de l'image..."
     $dismProcCommit = Start-Process -FilePath $DismExe -ArgumentList "/Unmount-Image /MountDir:$mountFolder /commit" -PassThru
     While($dismProcCommit.HasExited -eq $false)
@@ -90,17 +90,17 @@ if($dismProcMount.ExitCode -eq 0)
 }
 
 # Copy needed files on the final folder
-Copy-Item -Path "$p_folder\sccm.ipxe" -Destination "$p_folder\Work\Final" -Force
-Copy-Item -Path "$p_folder\wimbootSources\$wimbootFolder\wimboot" -Destination "$p_folder\Work\Final" -Force
-Copy-Item -Path "$p_folder\$p_imageId\bootmgr" -Destination "$p_folder\Work\Final" -Force
-Copy-Item -Path "$p_folder\$p_imageId\boot\bcd" -Destination "$p_folder\Work\Final" -Force
-Copy-Item -Path "$p_folder\$p_imageId\boot\boot.sdi" -Destination "$p_folder\Work\Final" -Force
-Copy-Item -Path "$p_folder\$p_imageId\sources\boot.wim" -Destination "$p_folder\Work\Final" -Force
+Copy-Item -Path "$WorkFolder\sccm.ipxe" -Destination "$WorkFolder\Work\Final" -Force
+Copy-Item -Path "$WorkFolder\wimbootSources\$wimbootFolder\wimboot" -Destination "$WorkFolder\Work\Final" -Force
+Copy-Item -Path "$WorkFolder\$BootImageId\bootmgr" -Destination "$WorkFolder\Work\Final" -Force
+Copy-Item -Path "$WorkFolder\$BootImageId\boot\bcd" -Destination "$WorkFolder\Work\Final" -Force
+Copy-Item -Path "$WorkFolder\$BootImageId\boot\boot.sdi" -Destination "$WorkFolder\Work\Final" -Force
+Copy-Item -Path "$WorkFolder\$BootImageId\sources\boot.wim" -Destination "$WorkFolder\Work\Final" -Force
 
 # Clean the directory
-if(Test-Path $p_folder)
+if(Test-Path $WorkFolder)
 {
-    #Rename-Item -Path $p_folder -NewName "$p_folder.$(Get-Date)" -Force
+    #Rename-Item -Path $WorkFolder -NewName "$WorkFolder.$(Get-Date)" -Force
 }
 
 # Return to the invocation folder
